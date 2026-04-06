@@ -4,11 +4,15 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 import os
+import sys
+
+# Ensure the 'api' directory is in the path for serverless environment
+sys.path.append(os.path.dirname(__file__))
 
 from pipelines.p1_input_handling import handle_text_input, handle_file_upload
 from pipelines.p2_preprocessing import preprocess_text
 
-app = FastAPI(title="Proper Noun Consistency Checker")
+app = FastAPI()
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -19,8 +23,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/api/health")
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "Translation Consistency System API is running"}
+
 # Endpoint for processing text/file
 @app.post("/api/process")
+@app.post("/process")
 async def process_data(
     text: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None)
@@ -63,6 +73,7 @@ from fastapi.responses import StreamingResponse
 from pipelines.p10_file_export import export_to_docx
 
 @app.post("/api/download-docx")
+@app.post("/download-docx")
 async def download_docx(text: str = Form(...)):
     """
     Pipeline 10 (File Export)
@@ -72,10 +83,5 @@ async def download_docx(text: str = Form(...)):
     return StreamingResponse(
         byte_stream,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": "attachment; filename=corrected_document.docx"}
+        headers={"Content-Disposition": "attachment; filename=consistent_translation.docx"}
     )
-
-# Ensure the frontend directory exists before mounting, mostly for safety
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
-if os.path.exists(frontend_path):
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

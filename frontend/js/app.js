@@ -123,7 +123,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             clearTimeout(timeoutId);
-            const result = await response.json();
+            
+            let result;
+            try {
+                result = await response.json();
+            } catch (jsonError) {
+                const text = await response.text();
+                console.error("Server returned non-JSON response:", text);
+                alert(`Analysis Error (HTTP ${response.status}): The server returned an invalid response (not JSON).`);
+                return;
+            }
 
             if (response.ok && result.status !== "error") {
                 outputSection.classList.remove('hidden');
@@ -159,8 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 100);
 
             } else {
-                const errorMsg = result.detail || result.message || "The server encountered an issue processing your request.";
-                alert(`Analysis Error: ${errorMsg}`);
+                // More detailed error reporting
+                const detail = result.detail || result.message || "Unknown Server Error";
+                const statusCode = response.status || "N/A";
+                alert(`Analysis Error (HTTP ${statusCode}): ${detail}`);
             }
         } catch (error) {
             clearTimeout(timeoutId);

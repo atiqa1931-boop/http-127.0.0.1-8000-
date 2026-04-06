@@ -1,10 +1,10 @@
-from pipelines.p3_tokenization import tokenize_text
-from pipelines.p4_detection import detect_candidates
-from pipelines.p5_variation import group_variations
-from pipelines.p6_canonical import select_canonical_forms
-from pipelines.p7_correction import apply_corrections
-from pipelines.p8_structuring import structure_results
-from pipelines.p9_output_generation import generate_output_text
+from .p3_tokenization import tokenize_text
+from .p4_detection import detect_candidates
+from .p5_variation import group_variations
+from .p6_canonical import select_canonical_forms
+from .p7_correction import apply_corrections
+from .p8_structuring import structure_results
+from .p9_output_generation import generate_output_text
 
 def run_analytical_pipelines(preprocessed_text: str):
     """
@@ -33,6 +33,6 @@ def run_analytical_pipelines(preprocessed_text: str):
     final_text = generate_output_text(preprocessed_text, corrected_tokens)
     
     return {
-        "final_text": final_text,
-        "report": structured_report
+        "final_text": final_text if final_text else preprocessed_text,
+        "report": structured_report if structured_report else {"total_corrections": 0, "details": []}
     }
