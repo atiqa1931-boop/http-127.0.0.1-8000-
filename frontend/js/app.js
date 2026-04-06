@@ -111,48 +111,65 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading(true);
         outputSection.classList.add('hidden');
 
+        // Create a controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
         try {
             const response = await fetch('/api/process', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
             const result = await response.json();
 
-            if (response.ok) {
+            if (response.ok && result.status !== "error") {
                 outputSection.classList.remove('hidden');
                 
-                pipelineStatus.innerHTML = `<p style="color: var(--success-color);">Analyzed and Corrected! Found ${result.report.total_corrections} inconsistencies.</p>`;
+                const report = result.report || { total_corrections: 0, details: [] };
+                const details = report.details || [];
+                
+                pipelineStatus.innerHTML = `<p style="color: var(--success-color);">Analysis Complete! Found ${report.total_corrections} inconsistencies.</p>`;
                 
                 // Populate the Table
                 reportBody.innerHTML = '';
-                if(result.report.details.length === 0) {
-                    reportBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No proper noun inconsistencies detected.</td></tr>';
+                if(details.length === 0) {
+                    reportBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No proper noun inconsistencies detected. Your translation is consistent!</td></tr>';
                 } else {
-                    result.report.details.forEach(item => {
+                    details.forEach(item => {
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td><strong>${item.canonical_form}</strong></td>
-                            <td>${item.replacements_count}</td>
-                            <td><span style="color:#94a3b8">${item.variants_found.join(', ')}</span></td>
+                            <td><strong>${item.canonical_form || 'N/A'}</strong></td>
+                            <td>${item.replacements_count || 0}</td>
+                            <td><span style="color:#94a3b8">${(item.variants_found || []).join(', ')}</span></td>
                         `;
                         reportBody.appendChild(tr);
                     });
                 }
                 
                 // Display text
-                currentFinalText = result.final_text;
+                currentFinalText = result.final_text || result.extracted_text || "";
                 finalTextOutput.textContent = currentFinalText;
 
                 // Smooth scroll to results
-                outputSection.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                    outputSection.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
 
             } else {
-                alert(`Error: ${result.detail || 'Unknown error'}`);
+                const errorMsg = result.detail || result.message || "The server encountered an issue processing your request.";
+                alert(`Analysis Error: ${errorMsg}`);
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert("An error occurred connecting to the server.");
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                alert("Analysis timed out. Please try with a smaller text or check your connection.");
+            } else {
+                console.error('Error:', error);
+                alert("An error occurred connecting to the server. Please ensure the backend is running.");
+            }
         } finally {
             showLoading(false);
         }

@@ -38,16 +38,26 @@ async def process_data(
 
     # --- Pipeline 11: System Integration (Runs P3-P9) ---
     from pipelines.p11_integration import run_analytical_pipelines
-    analytics = run_analytical_pipelines(preprocessed_text)
-    
-    # Returning data for the UI Dashboard
-    return {
-        "status": "success",
-        "extracted_text": raw_text,
-        "preprocessed_text": preprocessed_text,
-        "final_text": analytics["final_text"],
-        "report": analytics["report"]
-    }
+    try:
+        analytics = run_analytical_pipelines(preprocessed_text)
+        
+        # Returning data for the UI Dashboard
+        return {
+            "status": "success",
+            "extracted_text": raw_text,
+            "preprocessed_text": preprocessed_text,
+            "final_text": analytics.get("final_text", raw_text),
+            "report": analytics.get("report", {"total_corrections": 0, "details": []})
+        }
+    except Exception as e:
+        # Catch unexpected errors in the pipeline to prevent hanging
+        return {
+            "status": "error",
+            "detail": f"An error occurred during linguistic analysis: {str(e)}",
+            "extracted_text": raw_text,
+            "final_text": raw_text,
+            "report": {"total_corrections": 0, "details": []}
+        }
     
 from fastapi.responses import StreamingResponse
 from pipelines.p10_file_export import export_to_docx

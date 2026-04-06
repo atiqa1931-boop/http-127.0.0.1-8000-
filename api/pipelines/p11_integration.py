@@ -33,6 +33,6 @@ def run_analytical_pipelines(preprocessed_text: str):
     final_text = generate_output_text(preprocessed_text, corrected_tokens)
     
     return {
-        "final_text": final_text,
-        "report": structured_report
+        "final_text": final_text if final_text else preprocessed_text,
+        "report": structured_report if structured_report else {"total_corrections": 0, "details": []}
     }
