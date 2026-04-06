@@ -13,19 +13,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // File input UX
+    // File input and Drag & Drop UX
     const fileInput = document.getElementById('file-input');
     const fileMessage = document.querySelector('.file-message');
+    const fileDropArea = document.querySelector('.file-drop-area');
+    const loadingOverlay = document.getElementById('loading-overlay');
 
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            fileMessage.textContent = `Selected: ${e.target.files[0].name}`;
+    const updateFileMessage = (file) => {
+        if (file) {
+            fileMessage.textContent = `Selected: ${file.name}`;
             fileMessage.style.color = "var(--success-color)";
         } else {
-            fileMessage.textContent = "Drag & drop your .txt file here or click to browse";
+            fileMessage.textContent = "Drag & drop your .txt, .docx, or .pdf file here or click to browse";
             fileMessage.style.color = "";
         }
+    };
+
+    fileInput.addEventListener('change', (e) => {
+        updateFileMessage(e.target.files[0]);
     });
+
+    // Drag and Drop listeners
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileDropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        fileDropArea.addEventListener(eventName, () => {
+            fileDropArea.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        fileDropArea.addEventListener(eventName, () => {
+            fileDropArea.classList.remove('drag-over');
+        }, false);
+    });
+
+    fileDropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            updateFileMessage(files[0]);
+        }
+    }, false);
 
     // Process Button
     const processBtn = document.getElementById('process-btn');
@@ -34,6 +69,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportBody = document.getElementById('report-body');
     const finalTextOutput = document.getElementById('final-text-output');
     let currentFinalText = "";
+
+    const showLoading = (show) => {
+        if (show) {
+            loadingOverlay.classList.remove('hidden');
+            processBtn.disabled = true;
+        } else {
+            loadingOverlay.classList.add('hidden');
+            processBtn.disabled = false;
+        }
+    };
 
     processBtn.addEventListener('click', async () => {
         const activeTab = document.querySelector('.tab-content.active').id;
@@ -52,11 +97,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Please select a file.");
                 return;
             }
+            
+            // Basic client-side validation
+            const allowedExtensions = /(\.txt|\.docx|\.pdf)$/i;
+            if (!allowedExtensions.exec(file.name)) {
+                alert("Unsupported file type. Please upload a .txt, .docx, or .pdf file.");
+                return;
+            }
+            
             formData.append('file', file);
         }
 
-        processBtn.textContent = 'Processing...';
-        processBtn.disabled = true;
+        showLoading(true);
         outputSection.classList.add('hidden');
 
         try {
@@ -92,6 +144,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentFinalText = result.final_text;
                 finalTextOutput.textContent = currentFinalText;
 
+                // Smooth scroll to results
+                outputSection.scrollIntoView({ behavior: 'smooth' });
+
             } else {
                 alert(`Error: ${result.detail || 'Unknown error'}`);
             }
@@ -99,8 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error:', error);
             alert("An error occurred connecting to the server.");
         } finally {
-            processBtn.textContent = 'Analyze Consistency';
-            processBtn.disabled = false;
+            showLoading(false);
         }
     });
 
@@ -124,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dForm.append("text", currentFinalText);
             
             const btn = document.getElementById('download-docx-btn');
+            const originalText = btn.textContent;
             btn.textContent = 'Generating...';
             
             const response = await fetch('/api/download-docx', {
@@ -141,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             URL.revokeObjectURL(url);
             
-            btn.textContent = 'Download .DOCX';
+            btn.textContent = originalText;
         } catch (error) {
             alert("Error downloading DOCX: " + error.message);
         }
