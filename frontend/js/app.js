@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'corrected_proper_nouns.txt';
+        a.download = 'consistent_translation.txt';
         a.click();
         URL.revokeObjectURL(url);
     });
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'corrected_proper_nouns.docx';
+            a.download = 'consistent_translation.docx';
             a.click();
             URL.revokeObjectURL(url);
             
